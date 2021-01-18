@@ -6,7 +6,7 @@
             "app": "seldon"
         },
         "name": "modelpytorch",
-        "namespace": "kubeflow"
+        "namespace": "example"
     },
     "spec": {
         "annotations": {
