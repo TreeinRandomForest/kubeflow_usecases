@@ -165,7 +165,7 @@ def main():
                         help='number of epochs to train (default: 10)')
 
     parser.add_argument('--n-hidden', type=int, default=16, metavar='N',
-                        help='number of hidden layers')
+                        help='number of nodes in hidden layers')
 
     parser.add_argument('--optimizer', type=str, default='adam', metavar='N',
                         help='optimizer to use: "adam" or "sgd"')
