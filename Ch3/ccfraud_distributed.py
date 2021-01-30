@@ -73,15 +73,21 @@ class CCDataset(Dataset):
         #return {'features': torch.from_numpy(features), 'label': torch.from_numpy(label)}
         return (torch.from_numpy(features).float(), torch.from_numpy(label))
     
-
-def train_model(train_dl, test_dl, model, criterion, N_epochs, print_freq, lr=1e-3):
+def train_model(train_dl, test_dl, model, criterion, N_epochs, print_freq, lr=1e-3, optimizer='adam'):
     '''Loop over dataset in batches, compute loss, backprop and update weights
     '''
     
     model.train() #switch to train model (for dropout, batch normalization etc.)
     
     model = model.to(device)
-    optimizer = optim.Adam(model.parameters(), lr=lr)
+    if optimizer=='adam':
+        optimizer = optim.Adam(model.parameters(), lr=lr)
+        print("Using adam")
+    elif optimizer=='sgd':
+        optimizer = optim.SGD(model.parameters(), lr=lr)
+        print("Using sgd")
+    else:
+        raise ValueError("Please use either adam or sgd")
     
     avg_precision_dict, loss_dict = {}, {}
     for epoch in range(N_epochs): #loop over epochs i.e. sweeps over full data
@@ -157,6 +163,12 @@ def main():
 
     parser.add_argument('--epochs', type=int, default=1, metavar='N',
                         help='number of epochs to train (default: 10)')
+
+    parser.add_argument('--n-hidden', type=int, default=16, metavar='N',
+                        help='number of hidden layers')
+
+    parser.add_argument('--optimizer', type=str, default='adam', metavar='N',
+                        help='optimizer to use: "adam" or "sgd"')
     
     parser.add_argument('--lr', type=float, default=1e-3, metavar='LR',
                         help='learning rate (default: 1e-3)')
@@ -175,7 +187,8 @@ def main():
     
     parser.add_argument('--dir', default='logs', metavar='L',
                         help='directory where summary logs are stored')
-    
+  
+
     
     args = parser.parse_args()
     
@@ -183,7 +196,9 @@ def main():
     N_epochs = args.epochs
     lr = args.lr
     N_print = args.log_interval
-    
+    N_hidden = args.n_hidden
+    optimizer = args.optimizer
+        
     #distributed
     if should_distribute():
         dist.init_process_group(dist.Backend.GLOO)
@@ -203,14 +218,17 @@ def main():
     dl_torch_test = DataLoader(ds_torch_test, batch_size=batch_size, num_workers=0)
 
     #Network architecture and criterion
-    net = get_architecture(df_train)
+    net = get_architecture(df_train, N_hidden=N_hidden)
     criterion = get_criterion()
+    print(net)
+    print(f"Learning rate: {lr}")
     
     if is_distributed():
         Distributor = nn.parallel.DistributedDataParallel
         model = Distributor(model)
     
-    net, avg_precision_dict, loss_dict = train_model(dl_torch_train, dl_torch_test, net, criterion, N_epochs, N_print, lr=lr)    
-
+    net, avg_precision_dict, loss_dict = train_model(dl_torch_train, dl_torch_test, net, criterion, N_epochs, N_print, lr=lr, optimizer=optimizer)
+    
+    
 if __name__=='__main__':
     main()
