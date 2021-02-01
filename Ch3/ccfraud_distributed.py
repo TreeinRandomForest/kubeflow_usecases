@@ -225,7 +225,7 @@ def main():
     
     if is_distributed():
         Distributor = nn.parallel.DistributedDataParallel
-        model = Distributor(model)
+        net = Distributor(net)
     
     net, avg_precision_dict, loss_dict = train_model(dl_torch_train, dl_torch_test, net, criterion, N_epochs, N_print, lr=lr, optimizer=optimizer)
     
