@@ -1,0 +1,68 @@
+apiVersion: "kubeflow.org/v1beta1"
+kind: Experiment
+metadata:
+  namespace: nakfour
+  name: pytorchjob-example
+spec:
+  parallelTrialCount: 2
+  maxTrialCount: 5
+  maxFailedTrialCount: 2
+  objective:
+    type: maximize
+    goal: 0.99
+    objectiveMetricName: accuracy
+  algorithm:
+    algorithmName: random
+  parameters:
+    - name: lr
+      parameterType: double
+      feasibleSpace:
+        min: "0.01"
+        max: "0.05"
+    - name: num-epochs
+      parameterType: int
+      feasibleSpace:
+        min: "7"
+        max: "8"
+  trialTemplate:
+    primaryContainerName: pytorch
+    trialParameters:
+      - name: learningRate
+        description: Learning rate for the training model
+        reference: lr
+      - name: numberEpochs
+        description: Number of epochs to train the model
+        reference: num-epochs
+    trialSpec:
+      apiVersion: "kubeflow.org/v1"
+      kind: PyTorchJob
+      spec:
+        pytorchReplicaSpecs:
+          Master:
+            replicas: 1
+            restartPolicy: OnFailure
+            template:
+              spec:
+                containers:
+                  - name: pytorch
+                    image: docker.io/nakfour/pytorch-fdd:1.3
+                    imagePullPolicy: Always
+                    command:
+                      - "python"
+                      - "/var/ccfraud.py"
+                      - "--lr=${trialParameters.learningRate}"
+                      - "--epochs=${trialParameters.numberEpochs}"
+          Worker:
+            replicas: 2
+            restartPolicy: OnFailure
+            template:
+              spec:
+                containers:
+                  - name: pytorch
+                    image: docker.io/nakfour/pytorch-fdd:1.3
+                    imagePullPolicy: Always
+                    command:
+                      - "python"
+                      - "/var/ccfraud.py"
+                      - "--lr=${trialParameters.learningRate}"
+                      - "--epochs=${trialParameters.numberEpochs}"
