@@ -30,8 +30,10 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 import torch.distributed as dist
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+#device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'cpu'
 WORLD_SIZE = int(os.environ.get('WORLD_SIZE', 1))
+print(f'WORLD_SIZE = {WORLD_SIZE}')
 
 def get_architecture(df_train, N_hidden=128):
     '''Wrapper around the neural net architecture
@@ -224,7 +226,7 @@ def main():
     print(f"Learning rate: {lr}")
     
     if is_distributed():
-        Distributor = nn.parallel.DistributedDataParallel
+        Distributor = nn.parallel.DistributedDataParallelCPU
         net = Distributor(net)
     
     net, avg_precision_dict, loss_dict = train_model(dl_torch_train, dl_torch_test, net, criterion, N_epochs, N_print, lr=lr, optimizer=optimizer)
