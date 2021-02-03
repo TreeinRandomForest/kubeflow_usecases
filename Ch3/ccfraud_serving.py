@@ -216,6 +216,7 @@ def main():
     
     net, avg_precision_dict, loss_dict = train_model(dl_torch_train, dl_torch_test, net, criterion, N_epochs, N_print, lr=lr, optimizer=optimizer)
 
+    net.eval()
     torch.save(net.state_dict(), "model.pt")
     
 if __name__=='__main__':
