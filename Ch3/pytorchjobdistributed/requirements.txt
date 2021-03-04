@@ -1,6 +1,0 @@
-requests
-pandas
-sklearn
-joblib
-boto3
-torch
