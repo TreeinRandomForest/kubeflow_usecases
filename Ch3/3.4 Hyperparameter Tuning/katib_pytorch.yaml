@@ -22,6 +22,7 @@ spec:
         step: "0.01"
     - name: n-hidden
       parameterType: int
+      feasibleSpace:
         min: "12"
         max: "16"
         step: "2"
