@@ -9,21 +9,28 @@ spec:
   maxFailedTrialCount: 2
   objective:
     type: maximize
-    goal: 0.99
-    objectiveMetricName: accuracy
+    goal: 0.80
+    objectiveMetricName: avg_precision
   algorithm:
-    algorithmName: random
+    algorithmName: grid
   parameters:
     - name: lr
       parameterType: double
       feasibleSpace:
         min: "0.01"
         max: "0.05"
-    - name: num-epochs
+        step: "0.01"
+    - name: n-hidden
       parameterType: int
+        min: "12"
+        max: "16"
+        step: "2"
+    - name: optimizer
+      parameterType: categorical
       feasibleSpace:
-        min: "7"
-        max: "8"
+        list:
+          - "adam"
+          - "sgd"
   trialTemplate:
     primaryContainerName: pytorch
     trialParameters:

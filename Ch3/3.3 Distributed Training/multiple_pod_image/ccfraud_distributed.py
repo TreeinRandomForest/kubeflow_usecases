@@ -117,7 +117,10 @@ def train_model(train_dl, test_dl, model, criterion, N_epochs, print_freq, lr=1e
             avg_precision_dict[epoch] = val_avg_precision
             loss_dict[epoch] = val_loss
             
-            print(f'Iter = {epoch} Train Loss = {curr_loss / N} val_loss = {val_loss} val_avg_precision = {val_avg_precision}')
+            #print(f'Iter = {epoch} Train Loss = {curr_loss / N} val_loss = {val_loss} val_avg_precision = {val_avg_precision}')
+            print(f'epoch {epoch}')
+            print(f'loss={val_loss}')
+            print(f'avg_precision={val_avg_precision}\n')
             
     return model, avg_precision_dict, loss_dict
 
