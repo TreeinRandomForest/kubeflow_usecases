@@ -38,7 +38,7 @@ spec:
       - name: learningRate
         description: Learning rate for the training model
         reference: lr
-      - name: numberHiddenNodes
+      - name: numHiddenNodes
         description: Number of nodes in each hidden layer
         reference: n-hidden
       - name: optimizer
