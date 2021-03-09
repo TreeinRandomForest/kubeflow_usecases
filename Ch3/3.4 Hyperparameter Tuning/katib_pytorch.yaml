@@ -62,7 +62,9 @@ spec:
                       - "python"
                       - "/var/ccfraud.py"
                       - "--lr=${trialParameters.learningRate}"
-                      - "--epochs=${trialParameters.numberEpochs}"
+                      - "--n-hidden=${trialParameters.numHiddenNodes}"
+                      - "--optimizer=${trialParameters.optimizer}"
+
           Worker:
             replicas: 2
             restartPolicy: OnFailure
@@ -76,4 +78,5 @@ spec:
                       - "python"
                       - "/var/ccfraud.py"
                       - "--lr=${trialParameters.learningRate}"
-                      - "--epochs=${trialParameters.numberEpochs}"
+                      - "--n-hidden=${trialParameters.numHiddenNodes}"
+                      - "--optimizer=${trialParameters.optimizer}"
