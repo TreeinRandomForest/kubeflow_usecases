@@ -37,9 +37,12 @@ spec:
       - name: learningRate
         description: Learning rate for the training model
         reference: lr
-      - name: numberEpochs
-        description: Number of epochs to train the model
-        reference: num-epochs
+      - name: numberHiddenNodes
+        description: Number of nodes in each hidden layer
+        reference: n-hidden
+      - name: optimizer
+        description: Type of optimizer to use
+        reference: optimizer
     trialSpec:
       apiVersion: "kubeflow.org/v1"
       kind: PyTorchJob
