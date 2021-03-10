@@ -195,7 +195,7 @@ def main():
     N_print = args.log_interval
     N_hidden = args.n_hidden
     optimizer = args.optimizer
-    
+
     #Read data and preprocessing
     df = pd.read_csv('creditcard.csv')
     df.drop('Time', inplace=True, axis=1)
