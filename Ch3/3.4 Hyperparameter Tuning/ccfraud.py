@@ -17,7 +17,7 @@ from sklearn.metrics import precision_recall_curve,\
                             average_precision_score,\
                             roc_auc_score, roc_curve,\
                             confusion_matrix, classification_report
-from sklearn.externals import joblib
+#from sklearn.externals import joblib
 
 #Plotting
 import matplotlib.pylab as plt
