@@ -19,9 +19,6 @@ from sklearn.metrics import precision_recall_curve,\
                             confusion_matrix, classification_report
 #from sklearn.externals import joblib
 
-#Plotting
-import matplotlib.pylab as plt
-import matplotlib.colors
 
 #PyTorch
 import torch
