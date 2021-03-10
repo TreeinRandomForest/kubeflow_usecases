@@ -18,13 +18,13 @@ spec:
       parameterType: double
       feasibleSpace:
         min: "0.01"
-        max: "0.05"
+        max: "0.03"
         step: "0.01"
     - name: n-hidden
       parameterType: int
       feasibleSpace:
         min: "12"
-        max: "16"
+        max: "14"
         step: "2"
     - name: optimizer
       parameterType: categorical
