@@ -8,8 +8,6 @@ from kfp.components import func_to_container_op
 import kfp_tekton
 import config, utils
 
-#figure out parallelfor, for dynamic loops
-
 '''
 Cartoon for random search
 
@@ -65,18 +63,6 @@ class Net(nn.Module):
 
         return out
 
-def fit_gp_model():
-    #read data from store
-
-    #fit gp model
-
-    #compute acquisition function
-
-    #maximize acquisition function
-
-    #write point to store
-    pass
-
 def generate_random_search_point(iter_val: int) -> int:
     #read domain from store
 
@@ -130,8 +116,6 @@ def print_gen_val(iter_val: int) -> int:
 def download_data() -> int:
     '''Download and store data in persistent storage
     '''
-    return 0
-
     client = get_client()
 
     def generate_binary_data(N_examples=1000, seed=None):
