@@ -272,32 +272,14 @@ def run_pipeline():
     print_gen_val_op(10).after(retcode_placeholder)
 #------------------------------------------------------
 
-#kfp.compiler.Compiler().compile(run_pipeline, 'test_nested.yaml')
-from kfp_tekton.compiler import TektonCompiler
-TektonCompiler().compile(run_pipeline, 'test_sequential.yaml')
+pipeline_type = 'tekton':
 
-'''
-Q: can ops be wrapped in other ops
+if pipeline_type == 'argo':
+    kfp.compiler.Compiler().compile(run_pipeline, 'test_sequential_argo.yaml')
 
-op - deferred till pipeline executed
-non-op - run now
+elif pipeline_type == 'tekton':
+    from kfp_tekton.compiler import TektonCompiler
+    TektonCompiler().compile(run_pipeline, 'test_sequential_tekton.yaml')
 
-https://kubeflow-pipelines.readthedocs.io/en/latest/source/kfp.dsl.html
-
-BaseOp
-Condition
-ContainerOp
-ExitHandler
-InputArgumentPath
-ParallelFor
-PipelineConf
-PipelineExecutionMode
-PipelineParam
-PipelineVolume
-ResourceOp
-Sidecar
-SubGraph
-UserContainer
-VolumeOp
-VolumeSnapshotOp
-'''
+else:
+    raise ValueError(f"pipeline_type={pipeline_type} not valid")
