@@ -33,9 +33,13 @@ def example(rank, world_size):
 #    mp.spawn(example, args=(world_size,), nprocs=world_size, join=True)
 
 if __name__=='__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--local_rank", type=int)
-    parser.add_argument("--local_world_size", type=int)
-    args = parser.parse_args()
+    #parser = argparse.ArgumentParser()
+    #parser.add_argument("--local_rank", type=int)
+    #parser.add_argument("--local_world_size", type=int)
+    #args = parser.parse_args()
 
-    example(args.local_rank, args.local_world_size)
+    #example(args.local_rank, args.local_world_size)
+    rank = int(os.environ['RANK'])
+    world_size = int(os.environ['WORLD_SIZE'])
+
+    example(rank, world_size)

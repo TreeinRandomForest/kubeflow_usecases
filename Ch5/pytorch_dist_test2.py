@@ -28,7 +28,7 @@ def example(rank, world_size):
 
         for i in range(1, world_size):
             dist.recv(tensor=data[i], src=i)
-            
+
         print(f'Data: ', data)
 
     else:
@@ -52,7 +52,7 @@ if __name__=='__main__':
     #example(args.local_rank, args.local_world_size)
 
     #run.py
-    rank = int(os.environ['LOCAL_RANK'])
+    rank = int(os.environ['RANK'])
     world_size = int(os.environ['WORLD_SIZE'])
 
     example(rank, world_size)
