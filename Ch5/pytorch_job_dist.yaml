@@ -1,0 +1,26 @@
+apiVersion: "kubeflow.org/v1"
+kind: "PyTorchJob"
+metadata:
+  name: "pytorch-job-dist"
+spec:
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      restartPolicy: OnFailure
+      template:
+        spec:
+          containers:
+            - name: pytorch
+              image: docker.io/nakfour/pytorch_dist:latest
+              # Comment out the below resources to use the CPU.
+              resources: {} 
+    Worker:
+      replicas: 4
+      restartPolicy: OnFailure
+      template:
+        spec:
+          containers: 
+            - name: pytorch
+              image: docker.io/nakfour/pytorch_dist:latest
+              # Comment out the below resources to use the CPU.
+              resources: {} 
