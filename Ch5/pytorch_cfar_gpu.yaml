@@ -1,0 +1,28 @@
+apiVersion: "kubeflow.org/v1"
+kind: "PyTorchJob"
+metadata:
+  name: "pytorch-job-cfar-gpu"
+spec:
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      restartPolicy: OnFailure
+      template:
+        spec:
+          containers:
+            - name: pytorch
+              image: docker.io/nakfour/mnist_cifar_ddp_gpu:v0.5
+              resources:
+                limits:
+                  nvidia.com/gpu: 1
+    Worker:
+      replicas: 4
+      restartPolicy: OnFailure
+      template:
+        spec:
+          containers: 
+            - name: pytorch
+              image: docker.io/nakfour/mnist_cifar_ddp_gpu:v0.5
+              resources:
+                limits:
+                  nvidia.com/gpu: 1
