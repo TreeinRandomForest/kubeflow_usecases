@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-nn_config = {'input_sizes': 5, 'output_sizes': 5, 'embedding': {'1': {'opt_params': {'units': 10}}}}
+nn_config = {'input_sizes': 5, 'output_sizes': 7, 'embedding': {'1': {'opt_params': {'units': 10}}}}
 arch = [[1],
         [1, 0],
         [1, 1, 1]
@@ -65,7 +65,7 @@ def parse_config(arch, nn_config):
         in_val = out_val
 
     unit_list.append((in_val, output_size))
-
+    skip_cons[len(unit_list)-1] = []
 
     return unit_list, skip_cons
 
@@ -74,7 +74,7 @@ class Net(nn.Module):
     def __init__(self, arch, nn_config):
         super(Net, self).__init__()
 
-        self.unit_list, self.skip_connection = parse_config(arch, nn_config)
+        self.unit_list, self.skip_cons = parse_config(arch, nn_config)
         
         self.layer_list = nn.ModuleList()
         for l in self.unit_list:
@@ -85,7 +85,13 @@ class Net(nn.Module):
 
     def forward(self, x):
         out = x
-        for l in self.layer_list:
+        buffer = [x]
+        for idx, l in enumerate(self.layer_list):
+            
+            out = torch.cat([buffer[t] for t in self.skip_cons[idx]] + [out], dim=1)
+
             out = self.activation(l(out))
+            
+            buffer.append(out)
 
         return out
