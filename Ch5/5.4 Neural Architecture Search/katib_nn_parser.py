@@ -3,11 +3,43 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-nn_config = {'input_sizes': 5, 'output_sizes': 7, 'embedding': {'1': {'opt_params': {'units': 10}}}}
+import numpy as np
+
+nn_config = {'input_sizes': 5, 'output_sizes': 7, 'embedding': {'1': {'opt_type': 'dense', 'opt_params': {'units': 10}}}}
 arch = [[1],
         [1, 0],
         [1, 1, 1]
         ]
+
+#arch = [[1], [1, 1], [1, 0, 0], [1, 1, 1, 1]]
+
+
+def test(N_exp, max_length=3):
+    nn_config = {'input_sizes': 5, 'output_sizes': 7, 'embedding': {'1': {'opt_type': 'dense', 'opt_params': {'units': 10}}}}
+    arch = [[1],
+            [1, 0],
+            [1, 1, 1]
+            ]
+
+    for exp in range(N_exp):
+        n_layers = np.random.randint(1, max_length)
+
+        arch = []
+        for i in range(n_layers):
+            config = [1] + [np.random.randint(2) for k in range(i)] 
+            arch.append(config)
+
+        print("-------------")
+        [print(config) for config in arch]
+        net = Net(arch, nn_config)
+        x = torch.rand(3, 5)
+        try:
+            y = net(x)
+        except:
+            import ipdb
+            ipdb.set_trace()
+
+        print(y.shape)
 
 def parse_config(arch, nn_config):
     '''
@@ -37,35 +69,34 @@ def parse_config(arch, nn_config):
     output_size = nn_config['output_sizes']
 
     unit_list = []
+    act_list = [5]
     in_val = input_size
     out_val = None
+    carry = 0
+    skip_cons = {0: []}
 
-    skip_cons = {}
+    for idx, l in enumerate(arch):
+        layer_type = embedding[str(l[0])]
+        if layer_type['opt_type']!='dense': raise ValueError("found non-dense layer")
 
-    for idx, l in enumerate(arch): #loop over each layer (after input)
-        #lookup layer type
-        l_lookup_id = str(l[0])
-        emb = embedding[l_lookup_id]
+        out_val = layer_type['opt_params']['units']
+        act_list.append(out_val)
 
-        #keep track of incoming skip connections
-        skip_cons[idx] = []
-
-        out_val = emb['opt_params']['units']
-
-        #update dense layer in size based on skip connections
-        for s_id in range(1, len(l)):
-            s_bool = l[s_id]
-
-            if s_bool==1:
-                in_val += unit_list[s_id-1][0]
-                skip_cons[idx].append(s_id-1) #refers to input of unit_list[s_id-1]
-
-        unit_list.append((in_val, out_val))
-
+        unit_list.append((in_val + carry, out_val))
         in_val = out_val
+        carry = 0
 
-    unit_list.append((in_val, output_size))
-    skip_cons[len(unit_list)-1] = []
+        skip_cons[idx+1] = []
+        for skip_id in range(1, len(l)):
+            skip_val = l[skip_id]
+            
+            if skip_val==1:
+                #update in_val
+                #carry += unit_list[skip_id-1][0] #FIX
+                carry += act_list[skip_id-1]
+                skip_cons[idx+1].append(skip_id-1)
+
+    unit_list.append((in_val + carry, output_size))
 
     return unit_list, skip_cons
 
@@ -85,13 +116,15 @@ class Net(nn.Module):
 
     def forward(self, x):
         out = x
-        buffer = [x]
+        self.buffer = [x]
         for idx, l in enumerate(self.layer_list):
             
-            out = torch.cat([buffer[t] for t in self.skip_cons[idx]] + [out], dim=1)
+            out = torch.cat([self.buffer[t] for t in self.skip_cons[idx]] + [out], dim=1)
 
             out = self.activation(l(out))
             
-            buffer.append(out)
+            self.buffer.append(out)
 
         return out
+
+
