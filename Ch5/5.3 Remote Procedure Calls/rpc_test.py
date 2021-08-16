@@ -25,16 +25,11 @@ def run(rank, world_size):
         #rref = rpc.rpc_async('rank1', torch.sum, args=(torch.ones(2),))
         rref = rpc.remote('rank1', torch.sum, args=(torch.ones(2),))
         print(rref)
-        import ipdb
-        ipdb.set_trace()
-        
+        print(rref.to_here())  
 
-    elif rank==1:
+    else:
         rpc.init_rpc(f"rank{rank}", rank=rank, world_size=world_size,
             backend=rpc.BackendType.TENSORPIPE)
-    else:
-        rpc.init_rpc(f"rank{rank}", rank=rank, world_size=world_size, backend=rpc.BackendType.PROCESS_GROUP)
-
 
     rpc.shutdown()
 
