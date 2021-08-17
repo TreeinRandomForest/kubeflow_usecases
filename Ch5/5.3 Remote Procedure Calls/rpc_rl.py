@@ -5,8 +5,10 @@ import torch.distributed.rpc as rpc
 from torch.distributed.rpc import RRef, rpc_async, rpc_sync, remote
 import torch.multiprocessing as mp
 import torch
-import numpy as np
 
+import numpy as np
+import time
+import json
 import os
 import gym
 
@@ -74,6 +76,8 @@ class Coordinator():
 
         action_space = torch.arange(0, 2)
 
+        self.world_size = world_size
+
         self.policy = PolicyNet(N_inputs, 
                                 N_outputs, 
                                 N_hidden_layers, 
@@ -91,13 +95,18 @@ class Coordinator():
         self.optimizer = optim.Adam(self.policy.parameters(), lr=lr)
         self.gamma = gamma
 
+        #miscellaneous
+        self.iter = 0
+        self.log_interval = 10
+        self.stats = {}
+
     def get_action(self, state, worker_id):
         #predict prob distribution on actions and sample
         action_probs = self.policy(torch.tensor(state).float().unsqueeze(0))[0]
         action_selected_index = torch.multinomial(action_probs, 1).item()
         
         #update log probs needed for policy gradient updates
-        self.log_probs[worker_id].append(action_probs[action_selected_index])
+        self.log_probs[worker_id].append(action_probs[[action_selected_index]].log())
 
         return action_selected_index
 
@@ -107,25 +116,37 @@ class Coordinator():
         #assert(len(self.rewards[worker_id]==self.log_probs[worker_id]))
 
     def update_model(self):
-        print("Update")
-        print(self.log_probs.keys())
-        print(self.log_probs[1])
-        print(self.rewards.keys())
-        print(self.rewards[1])
-        #update PG model
+        #compute J = expected reward
+        J = 0
+        total_rewards_list = []
+        for k in range(1, self.world_size):
+            total_log_prob = torch.cat(self.log_probs[k]).sum()
+            total_reward = np.sum(self.rewards[k]).sum()
+
+            J += (total_log_prob)*(total_reward)
+
+            total_rewards_list.append(total_reward)
 
         #compute rewards to go
 
         #baseline is just MC average of current episode
 
-        #compute J = expected reward
 
         #backprop and update policy
+        self.optimizer.zero_grad()
+        (-J).backward()
+        self.optimizer.step()
+
+        if self.iter % self.log_interval == 0:
+            print(f"Average Reward: {np.mean(total_rewards_list)}")
 
         self.log_probs = {i:[] for i in range(1, world_size)}
         self.rewards = {i:[] for i in range(1, world_size)}
+        self.stats[self.iter] = np.mean(total_rewards_list)
+        self.iter += 1
         
     def run_training_loop(self, N_iter, coord_rref):
+        self.iter = 0
         for i in range(N_iter):
             #create world_size-1 EpisodeRunner objects
             rref_list = [rpc.remote(f"rank{j}", EpisodeRunner, (j,)) for j in range(1, world_size)]
@@ -141,7 +162,7 @@ class Coordinator():
 
 class EpisodeRunner:
     def __init__(self, rank):
-        self.env = gym.make('CartPole-v0')
+        self.env = gym.make('CartPole-v1')
         self.action_space = np.arange(0, 2)
         self.rank = rank
 
@@ -174,10 +195,10 @@ def run(rank, world_size):
     
         coordinator = Coordinator(world_size=world_size)
         coord_rref = RRef(coordinator)
-        coordinator.run_training_loop(1, coord_rref)
+        coordinator.run_training_loop(1000, coord_rref)
 
-        import ipdb
-        ipdb.set_trace()
+        torch.save(coordinator.policy, open(f'plots/policy_nworkers{world_size-1}.pt', 'wb'))
+        json.dump(coordinator.stats, open(f'plots/stats_nworkers{world_size-1}.json', 'w'))
 
     else:
         rpc.init_rpc(f"rank{rank}", rank=rank, world_size=world_size,
