@@ -15,7 +15,8 @@ from torchvision.datasets import MNIST, CIFAR10
 
 import katib_nn_parser as parser
 
-device = "cuda:0"
+#device = "cuda:0"
+device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
 key_list = ['MASTER_ADDR', 'MASTER_PORT', 'RANK', 'WORLD_SIZE']
 
