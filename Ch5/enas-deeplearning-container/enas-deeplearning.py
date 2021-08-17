@@ -9,37 +9,100 @@ import numpy as np
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 
+
+def parse_config(arch, nn_config):
+    '''
+    Note: this was tested on conv nets only.
+
+    arch: [[i1], [i2, X], [i3,X,X]]
+    where: X is either 0 or 1 (boolean)
+
+    iK is a key in nn_config["embedding"] signifying which layer to pick
+
+    X booleans signify whether a skip connection from preivous layers
+    is present or not
+
+    Note: i1 is the first layer *after* the input layer
+
+    In particular,
+    i1 only has inputs from input layer
+    i2 has inputs from i1 and possibly from input layer (one X)
+    i3 has inputs from i2 and possibly from i1/input
+    iK has inputs from i(K-1) and possibly from i{1,...,K-2}/input
+
+    Skip connections (from previous layers) are:
+
+    '''
+    embedding = nn_config['embedding']
+    input_size = nn_config['input_sizes']
+    output_size = nn_config['output_sizes']
+
+    unit_list = []
+    act_list = [5]
+    in_val = input_size[0]
+    out_val = None
+    carry = 0
+    skip_cons = {0: []}
+
+    for idx, l in enumerate(arch):
+        layer_type = embedding[str(l[0])]
+        if layer_type['opt_type']!='dense': raise ValueError("found non-dense layer")
+
+        out_val = layer_type['opt_params']['units']
+        act_list.append(out_val)
+        print(f'Type for out_val is{type(out_val)} and for carry {type(carry)}')
+        print(f'Type for out_val value is{out_val} and for carry value {carry}')
+        print(f'Type for in_val value is {in_val} and for in_val tyle {type(in_val)}')
+        unit_list.append((in_val + carry, out_val))
+        in_val = out_val
+        carry = 0
+
+        skip_cons[idx+1] = []
+        for skip_id in range(1, len(l)):
+            skip_val = l[skip_id]
+
+            if skip_val==1:
+                #update in_val
+                #carry += unit_list[skip_id-1][0] #FIX
+                carry += act_list[skip_id-1]
+                skip_cons[idx+1].append(skip_id-1)
+
+    unit_list.append((in_val + carry, output_size[0]))
+
+    return unit_list, skip_cons
+
+
 class Net(nn.Module):
-    def __init__(self, n_inputs=2, n_outputs=1, n_hidden_nodes=10, n_hidden_layers=1, activation=nn.ReLU(), output_activation=None):
+    def __init__(self, arch, nn_config):
         super(Net, self).__init__()
 
+        self.unit_list, self.skip_cons = parse_config(arch, nn_config)
+
         self.layer_list = nn.ModuleList()
+        for l in self.unit_list:
+            self.layer_list.append(nn.Linear(l[0], l[1]))
 
-        for i in range(n_hidden_layers):
-            if i==0:
-                self.layer_list.append(nn.Linear(n_inputs, n_hidden_nodes))
-            else:
-                self.layer_list.append(nn.Linear(n_hidden_nodes, n_hidden_nodes))
-        
-        self.output_layer = nn.Linear(n_hidden_nodes, n_outputs)
-
-        self.activation = activation
-        self.output_activation = output_activation
+        self.activation = nn.ReLU()
+        self.output_activation = nn.Softmax(dim=1)
 
     def forward(self, x):
         out = x
+        self.buffer = [x]
+        for idx, l in enumerate(self.layer_list):
 
-        for layer in self.layer_list:
-            out = self.activation(layer(out))
+            out = torch.cat([self.buffer[t] for t in self.skip_cons[idx]] + [out], dim=1)
 
-        out = self.output_layer(out)
-        if self.output_activation is not None:
-            out = self.output_activation(out)
+            out = self.activation(l(out))
+
+            self.buffer.append(out)
 
         return out
 
-def train_model(learningrate, numepochs, numhiddenlayers, numnodes,activation) -> int:
+#def train_model(learningrate, numepochs, numhiddenlayers, numnodes,activation) -> int:
+def train_model(numepochs, arch, nn_config) -> int:
     #device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    #TODO add gpu support
+    device='cpu'
     #print(f'Device = {device}')
     #features_train = torch.from_numpy(read_from_store(bucket_name, 'features_train')).float()
     #target_train = torch.from_numpy(read_from_store(bucket_name, 'target_train')).float()
@@ -67,18 +130,20 @@ def train_model(learningrate, numepochs, numhiddenlayers, numnodes,activation) -
     traininingdata = cfarDatasets(root="./trainingdata", train=True, download=True, transform=train_transform)
     
     #lr = float(conf.get('lr', 1e-2))
+    learningrate=1e-2
     #N_epochs = int(conf.get('N_epochs', 1000))
     #num_hidden_layers = int(conf.get('num_hidden_layers', 1))
     #num_nodes = int(conf.get('num_nodes', 2))
     #activation = conf.get('activation', 'relu')
 
     #should be dependent on vars read from config
-    if activation=='relu':
-        activation = nn.ReLU()
-    elif activation=='sigmoid':
-        activation = nn.Sigmoid()
-
-    model = Net(n_inputs=3, n_outputs=10, n_hidden_nodes=numnodes, n_hidden_layers=numhiddenlayers, activation=activation, output_activation=nn.Sigmoid())
+    #if activation=='relu':
+     #   activation = nn.ReLU()
+    #elif activation=='sigmoid':
+    #    activation = nn.Sigmoid()
+    arch_dict = json.loads(arch)
+    nn_config_dict = json.loads(nn_config)
+    model = Net(arch_dict, nn_config_dict)
     
     criterion = nn.BCELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learningrate) #Adam optimizer
@@ -89,7 +154,7 @@ def train_model(learningrate, numepochs, numhiddenlayers, numnodes,activation) -
         features_train = features_train.to(device)
         target_train = target_train.to(device)
 
-    for epoch in range(N_epochs): #N_epochs = number of iterations over the full dataset
+    for epoch in range(numepochs): 
         features_shuffled = features_train
         target_shuffled = target_train
 
@@ -137,13 +202,14 @@ if __name__ == "__main__":
     #print(">>> num_gpus received by trial:")
     #print(num_gpus)
 
-	#Using CPU for now
+    #Using CPU for now
     device = torch.device("cpu")
     print(">>> Use CPU for Training <<<")
 
     #for not using relu
     activation = "relu"
     #train_model(learningrate, num_epochs, num_layers, num_nodes,activation)
+    train_model(num_epochs, arch, nn_config)
 	
 	
 

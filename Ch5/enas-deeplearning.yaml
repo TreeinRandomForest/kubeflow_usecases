@@ -1,7 +1,6 @@
 apiVersion: "kubeflow.org/v1beta1"
 kind: Experiment
 metadata:
-  namespace: kubeflow-user-example-com
   name: enas-deeplearning
 spec:
   parallelTrialCount: 2
@@ -129,6 +128,7 @@ spec:
           spec:
             containers:
               - name: enas-container
+                imagePullPolicy: Always
                 image: docker.io/nakfour/enas-deeplearning:v0.1
                 command:
                   - python3
