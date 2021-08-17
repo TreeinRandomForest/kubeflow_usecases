@@ -99,6 +99,9 @@ class Coordinator():
         self.iter = 0
         self.log_interval = 10
         self.stats = {}
+        self.start_time = time.time()
+        self.exp_reward_factor = 0.90
+        self.exp_reward_avg = 0
 
     def get_action(self, state, worker_id):
         #predict prob distribution on actions and sample
@@ -119,30 +122,49 @@ class Coordinator():
         #compute J = expected reward
         J = 0
         total_rewards_list = []
+        '''
         for k in range(1, self.world_size):
             total_log_prob = torch.cat(self.log_probs[k]).sum()
-            total_reward = np.sum(self.rewards[k]).sum()
+            total_reward = np.sum(self.rewards[k])
 
             J += (total_log_prob)*(total_reward)
 
             total_rewards_list.append(total_reward)
+        '''
 
         #compute rewards to go
+        #import ipdb
+        #ipdb.set_trace()
+
+        for k in range(1, self.world_size):
+            r = np.array(self.rewards[k])
+            episode_length = len(r)
+
+            r_to_go = torch.tensor([np.sum(r[t:] * self.gamma**(np.arange(episode_length-t))) for t in range(episode_length)])
+
+            J += (torch.cat(self.log_probs[k]) * r_to_go).sum()
+
+            total_reward = np.sum(self.rewards[k])
+            total_rewards_list.append(total_reward)
 
         #baseline is just MC average of current episode
+        self.current_reward_avg = np.mean(total_rewards_list)
+        self.exp_reward_avg = self.exp_reward_factor*self.exp_reward_avg + (1-self.exp_reward_factor)*self.current_reward_avg
 
 
         #backprop and update policy
+        J /= len(self.rewards)
         self.optimizer.zero_grad()
         (-J).backward()
         self.optimizer.step()
 
         if self.iter % self.log_interval == 0:
-            print(f"Average Reward: {np.mean(total_rewards_list)}")
+            print(f"Current Average Reward: {self.current_reward_avg} Exponentially Average Reward: {self.exp_reward_avg}")
 
         self.log_probs = {i:[] for i in range(1, world_size)}
         self.rewards = {i:[] for i in range(1, world_size)}
-        self.stats[self.iter] = np.mean(total_rewards_list)
+        
+        self.stats[time.time()-self.start_time] = (self.current_reward_avg, self.exp_reward_avg)
         self.iter += 1
         
     def run_training_loop(self, N_iter, coord_rref):
@@ -193,7 +215,7 @@ def run(rank, world_size):
         rpc.init_rpc(f"rank{rank}", rank=rank, world_size=world_size,
             backend=rpc.BackendType.TENSORPIPE)
     
-        coordinator = Coordinator(world_size=world_size)
+        coordinator = Coordinator(world_size=world_size, lr=1e-3)
         coord_rref = RRef(coordinator)
         coordinator.run_training_loop(1000, coord_rref)
 
