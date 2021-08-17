@@ -3,12 +3,13 @@ import torch
 import torch.optim as optim
 import argparse
 import json
-
+import time
 import numpy as np
 
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
-
+from torchvision.transforms import PILToTensor
+from torch.utils.data import DataLoader
 
 def parse_config(arch, nn_config):
     '''
@@ -48,11 +49,11 @@ def parse_config(arch, nn_config):
         layer_type = embedding[str(l[0])]
         if layer_type['opt_type']!='dense': raise ValueError("found non-dense layer")
 
-        out_val = layer_type['opt_params']['units']
+        out_val = int(layer_type['opt_params']['units'])
         act_list.append(out_val)
         print(f'Type for out_val is{type(out_val)} and for carry {type(carry)}')
-        print(f'Type for out_val value is{out_val} and for carry value {carry}')
-        print(f'Type for in_val value is {in_val} and for in_val tyle {type(in_val)}')
+        print(f'Value for out_val value is{out_val} and for carry value {carry}')
+        print(f'Value for in_val value is {in_val} and Type for in_val tyle {type(in_val)}')
         unit_list.append((in_val + carry, out_val))
         in_val = out_val
         carry = 0
@@ -98,80 +99,86 @@ class Net(nn.Module):
 
         return out
 
-#def train_model(learningrate, numepochs, numhiddenlayers, numnodes,activation) -> int:
-def train_model(numepochs, arch, nn_config) -> int:
-    #device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+def train_model(numepochs, arch, nn_config):
     #TODO add gpu support
     device='cpu'
-    #print(f'Device = {device}')
-    #features_train = torch.from_numpy(read_from_store(bucket_name, 'features_train')).float()
-    #target_train = torch.from_numpy(read_from_store(bucket_name, 'target_train')).float()
-    #features_test = torch.from_numpy(read_from_store(bucket_name, 'features_test')).float()
-    #target_test = torch.from_numpy(read_from_store(bucket_name, 'target_test')).float()
     #Get the training set
     cfarDatasets = datasets.CIFAR10
-   # numberOfClasses = 10
-   # numberOfInputs = 3
-    # Do preprocessing TODO CHANGE
-    MEAN = [0.49139968, 0.48215827, 0.44653124]
-    STD = [0.24703233, 0.24348505, 0.26158768]
-    #might be taken out
-    transf = [
-        transforms.RandomCrop(32, padding=4),
-        transforms.RandomHorizontalFlip()
-    ]
-
-    normalize = [
-        transforms.ToTensor(),
-        transforms.Normalize(MEAN, STD)
-    ]
-
-    train_transform = transforms.Compose(transf + normalize)
-    traininingdata = cfarDatasets(root="./trainingdata", train=True, download=True, transform=train_transform)
     
-    #lr = float(conf.get('lr', 1e-2))
+    ds_train = cfarDatasets(root="./trainingdata", train=True, download=True, transform=PILToTensor())
+    ds_test = cfarDatasets(root="./trainingdata", train=False, download=True, transform=PILToTensor())
+    
     learningrate=1e-2
-    #N_epochs = int(conf.get('N_epochs', 1000))
-    #num_hidden_layers = int(conf.get('num_hidden_layers', 1))
-    #num_nodes = int(conf.get('num_nodes', 2))
-    #activation = conf.get('activation', 'relu')
 
-    #should be dependent on vars read from config
-    #if activation=='relu':
-     #   activation = nn.ReLU()
-    #elif activation=='sigmoid':
-    #    activation = nn.Sigmoid()
     arch_dict = json.loads(arch)
     nn_config_dict = json.loads(nn_config)
-    model = Net(arch_dict, nn_config_dict)
     
-    criterion = nn.BCELoss()
+    dl_train = DataLoader(dataset=ds_train, batch_size=32)
+    dl_test = DataLoader(dataset=ds_test, batch_size=32)
+
+    model = Net(arch_dict, nn_config_dict)
+    model = model.to(device)    
+    criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learningrate) #Adam optimizer
-    model.train()    
+    model=model.train()
+    
 
-    if device!='cpu':
-        model = model.to(device)
-        features_train = features_train.to(device)
-        target_train = target_train.to(device)
+    time_dict = {}
+    start = time.time()
+    print_freq=2
+    for n in range(numepochs): 
+        if n % print_freq == 0:
+            total_loss = 0
+            total_n = 0
+            total_correct = 0
 
-    for epoch in range(numepochs): 
-        features_shuffled = features_train
-        target_shuffled = target_train
+        for idx, (X, y) in enumerate(dl_train):
+            X = (X - 128.) / 255.
 
-        out = model(features_shuffled) #predictions from model
-        loss = criterion(out.squeeze(), target_shuffled.squeeze()) #loss between predictions and labels
+            X = X.flatten(start_dim=1, end_dim=-1)
+            X = X.to(device)
+            y = y.to(device)
 
-        if epoch % 1000 == 0:
-            print(f'epoch = {epoch} loss = {loss}')
+            pred = model(X)
+            loss = criterion(pred, y)
 
-        optimizer.zero_grad()
-        loss.backward() #compute gradients
-        optimizer.step() #update model
+            if n % print_freq == 0:
+                total_loss += loss
+                total_n += X.shape[0]
+                total_correct += (pred.argmax(dim=1)==y).sum()
 
-    out = model(features_shuffled) #predictions from model
-    train_loss = criterion(out.squeeze(), target_shuffled.squeeze()) #loss between predictions and labels
-    print(f'Train Loss : {train_loss}')
+            #print(f'batch loss={loss} epoch={n} batch_id={idx} data_sum={X.sum()} data_shape={X.shape}')
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
+        if n % print_freq == 0:
+            val_acc = evaluate_model(model, dl_test, device=device)
+            print(f'epoch = {n} total_examples={total_n} loss = {total_loss:.3f} train accuracy = {total_correct/total_n} val accuracy={val_acc:.2f}')
+
+    return  model
+
+def evaluate_model(net, dl_test, device='cpu'):
+    net = net.eval()
+
+    labels = torch.tensor([]).to(device)
+    preds = torch.tensor([]).to(device)
+
+    for idx, (X, y) in enumerate(dl_test):
+        X = (X - 128.) / 255.
+
+        X = X.flatten(start_dim=1, end_dim=-1)
+        X = X.to(device)
+        y = y.to(device)
+
+        pred = net(X)
+
+        preds = torch.hstack((preds, pred.argmax(dim=1)))
+        labels = torch.hstack((labels, y))
+
+    accuracy = (preds==labels).sum() / len(labels)
+
+    return accuracy
 
 
 
@@ -207,8 +214,9 @@ if __name__ == "__main__":
     print(">>> Use CPU for Training <<<")
 
     #for not using relu
-    activation = "relu"
-    #train_model(learningrate, num_epochs, num_layers, num_nodes,activation)
+    #activation = "relu"
+    arch = '[[1],[1, 0],[1, 1, 1]]'
+    nn_config = '{"input_sizes": [5],"output_sizes": [7],"embedding": {"1": {"opt_type": "dense","opt_params": {"units": "10"}}}}'
     train_model(num_epochs, arch, nn_config)
 	
 	
