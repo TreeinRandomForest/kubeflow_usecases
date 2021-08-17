@@ -69,7 +69,7 @@ def parse_config(arch, nn_config):
     output_size = nn_config['output_sizes']
 
     unit_list = []
-    act_list = [5]
+    act_list = [input_size]
     in_val = input_size
     out_val = None
     carry = 0
