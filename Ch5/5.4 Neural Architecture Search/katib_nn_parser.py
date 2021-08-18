@@ -5,7 +5,7 @@ import torch.optim as optim
 
 import numpy as np
 
-nn_config = {'input_sizes': 5, 'output_sizes': 7, 'embedding': {'1': {'opt_type': 'dense', 'opt_params': {'units': '10'}}}}
+nn_config = {'input_sizes': [5], 'output_sizes': [7], 'embedding': {'1': {'opt_type': 'dense', 'opt_params': {'units': '10'}}}}
 arch = [[1],
         [1, 0],
         [1, 1, 1]
@@ -15,7 +15,7 @@ arch = [[1],
 
 
 def test(N_exp, max_length=3):
-    nn_config = {'input_sizes': 5, 'output_sizes': 7, 'embedding': {'1': {'opt_type': 'dense', 'opt_params': {'units': '10'}}}}
+    nn_config = {'input_sizes': [5], 'output_sizes': [7], 'embedding': {'1': {'opt_type': 'dense', 'opt_params': {'units': '10'}}}}
     arch = [[1],
             [1, 0],
             [1, 1, 1]
@@ -65,8 +65,8 @@ def parse_config(arch, nn_config):
 
     '''
     embedding = nn_config['embedding']
-    input_size = nn_config['input_sizes']
-    output_size = nn_config['output_sizes']
+    input_size = nn_config['input_sizes'][0]
+    output_size = nn_config['output_sizes'][0]
 
     unit_list = []
     act_list = [input_size]
