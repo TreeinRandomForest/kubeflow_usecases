@@ -1,0 +1,57 @@
+apiVersion: "kubeflow.org/v1beta1"
+kind: Experiment
+metadata:
+  name: enas-dense
+spec:
+  parallelTrialCount: 2
+  maxTrialCount: 10
+  maxFailedTrialCount: 2
+  objective:
+    type: maximize
+    goal: 0.99
+    objectiveMetricName: Validation-Accuracy
+  algorithm:
+    algorithmName: enas
+  nasConfig:
+    graphConfig:
+      numLayers: 10
+      inputSizes:
+        - 3072
+      outputSizes:
+        - 10
+    operations:
+      - operationType: dense
+        parameters:
+          - name: units
+            parameterType: int
+            feasibleSpace:
+              min: "20"
+              max: "500"
+              step: "10"
+  trialTemplate:
+    primaryContainerName: enas-container
+    trialParameters:
+      - name: neuralNetworkArchitecture
+        description: NN architecture contains operations ID on each NN layer and skip connections between layers
+        reference: architecture
+      - name: neuralNetworkConfig
+        description: Configuration contains NN number of layers, input and output sizes, description what each operation ID means
+        reference: nn_config
+    trialSpec:
+      apiVersion: batch/v1
+      kind: Job
+      spec:
+        template:
+          spec:
+            containers:
+              - name: enas-container
+                imagePullPolicy: Always
+                image: docker.io/nakfour/enas-deeplearning:v0.1
+                command:
+                  - python3
+                  - -u
+                  - enas-deeplearning.py
+                  - --num_epochs=20
+                  - --architecture="${trialParameters.neuralNetworkArchitecture}"
+                  - --nn_config="${trialParameters.neuralNetworkConfig}"
+            restartPolicy: Never
