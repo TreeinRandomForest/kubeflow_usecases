@@ -31,16 +31,16 @@ def parse_config(arch, nn_config):
     i3 has inputs from i2 and possibly from i1/input
     iK has inputs from i(K-1) and possibly from i{1,...,K-2}/input
 
-    Skip connections (from previous layers) are:
+    Skip connections (from previous layers) are: 
 
     '''
     embedding = nn_config['embedding']
-    input_size = nn_config['input_sizes']
-    output_size = nn_config['output_sizes']
+    input_size = nn_config['input_sizes'][0]
+    output_size = nn_config['output_sizes'][0]
 
     unit_list = []
-    act_list = [5]
-    in_val = input_size[0]
+    act_list = [input_size]
+    in_val = input_size
     out_val = None
     carry = 0
     skip_cons = {0: []}
@@ -51,9 +51,7 @@ def parse_config(arch, nn_config):
 
         out_val = int(layer_type['opt_params']['units'])
         act_list.append(out_val)
-        print(f'Type for out_val is{type(out_val)} and for carry {type(carry)}')
-        print(f'Value for out_val value is{out_val} and for carry value {carry}')
-        print(f'Value for in_val value is {in_val} and Type for in_val tyle {type(in_val)}')
+
         unit_list.append((in_val + carry, out_val))
         in_val = out_val
         carry = 0
@@ -61,14 +59,14 @@ def parse_config(arch, nn_config):
         skip_cons[idx+1] = []
         for skip_id in range(1, len(l)):
             skip_val = l[skip_id]
-
+            
             if skip_val==1:
                 #update in_val
                 #carry += unit_list[skip_id-1][0] #FIX
                 carry += act_list[skip_id-1]
                 skip_cons[idx+1].append(skip_id-1)
 
-    unit_list.append((in_val + carry, output_size[0]))
+    unit_list.append((in_val + carry, output_size))
 
     return unit_list, skip_cons
 
@@ -78,11 +76,11 @@ class Net(nn.Module):
         super(Net, self).__init__()
 
         self.unit_list, self.skip_cons = parse_config(arch, nn_config)
-
+        
         self.layer_list = nn.ModuleList()
         for l in self.unit_list:
             self.layer_list.append(nn.Linear(l[0], l[1]))
-
+        
         self.activation = nn.ReLU()
         self.output_activation = nn.Softmax(dim=1)
 
@@ -90,14 +88,15 @@ class Net(nn.Module):
         out = x
         self.buffer = [x]
         for idx, l in enumerate(self.layer_list):
-
+            
             out = torch.cat([self.buffer[t] for t in self.skip_cons[idx]] + [out], dim=1)
 
             out = self.activation(l(out))
-
+            
             self.buffer.append(out)
 
         return out
+
 
 def train_model(numepochs, arch, nn_config):
     #TODO add gpu support
@@ -122,7 +121,6 @@ def train_model(numepochs, arch, nn_config):
     optimizer = torch.optim.Adam(model.parameters(), lr=learningrate) #Adam optimizer
     model=model.train()
     
-
     time_dict = {}
     start = time.time()
     print_freq=2
@@ -216,7 +214,7 @@ if __name__ == "__main__":
     #for not using relu
     #activation = "relu"
     arch = '[[1],[1, 0],[1, 1, 1]]'
-    nn_config = '{"input_sizes": [5],"output_sizes": [7],"embedding": {"1": {"opt_type": "dense","opt_params": {"units": "10"}}}}'
+    nn_config = '{"input_sizes": [3072],"output_sizes": [10],"embedding": {"1": {"opt_type": "dense","opt_params": {"units": "10"}}}}'
     train_model(num_epochs, arch, nn_config)
 	
 	
