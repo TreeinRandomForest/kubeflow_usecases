@@ -99,7 +99,11 @@ def train_loop(arch, nn_config, dataset='MNIST', n_epochs=50, batch_size=32, lr=
 
         if n % print_freq == 0:
             val_acc = evaluate_model(net, dl_test, device=device)
-            print(f'epoch = {n} total_examples={total_n} loss = {total_loss:.3f} train accuracy = {total_correct/total_n} val accuracy={val_acc:.2f}')
+            #print(f'epoch = {n} total_examples={total_n} loss = {total_loss:.3f} train accuracy = {total_correct/total_n} val accuracy={val_acc:.2f}')
+
+            print(f"epoch {n+1}:")
+            print(f'Validation-Accuracy={val_acc}')
+            print("")            
 
     return net
 

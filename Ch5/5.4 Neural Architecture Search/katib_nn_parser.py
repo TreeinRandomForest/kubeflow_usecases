@@ -112,7 +112,7 @@ class Net(nn.Module):
             self.layer_list.append(nn.Linear(l[0], l[1]))
         
         self.activation = nn.ReLU()
-        self.output_activation = nn.Softmax(dim=1)
+        #self.output_activation = nn.Softmax(dim=1)
 
     def forward(self, x):
         out = x
@@ -121,8 +121,11 @@ class Net(nn.Module):
             
             out = torch.cat([self.buffer[t] for t in self.skip_cons[idx]] + [out], dim=1)
 
-            out = self.activation(l(out))
-            
+            if idx==len(self.layer_list)-1:
+                out = l(out)
+            else:
+                out = self.activation(l(out))            
+
             self.buffer.append(out)
 
         return out
