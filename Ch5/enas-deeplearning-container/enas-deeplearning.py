@@ -148,14 +148,16 @@ def train_model(numepochs, arch, nn_config):
                 total_n += X.shape[0]
                 total_correct += (pred.argmax(dim=1)==y).sum()
 
-            #print(f'batch loss={loss} epoch={n} batch_id={idx} data_sum={X.sum()} data_shape={X.shape}')
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
+        print_freq = 1
         if n % print_freq == 0:
             val_acc = evaluate_model(model, dl_test, device=device)
-            print(f'epoch = {n} total_examples={total_n} loss = {total_loss:.3f} train accuracy = {total_correct/total_n} val accuracy={val_acc:.2f}')
+            print(f"epoch {n+1}:")
+            print(f'Validation-Accuracy={val_acc}')
+            print("")
 
     return  model
 
@@ -204,18 +206,13 @@ if __name__ == "__main__":
     print(">>> num_epochs received by trial")
     print(num_epochs)
 
-    #num_gpus = args.num_gpus
-    #print(">>> num_gpus received by trial:")
-    #print(num_gpus)
-
     #Using CPU for now
     device = torch.device("cpu")
     print(">>> Use CPU for Training <<<")
 
-    #for not using relu
-    #activation = "relu"
-    arch = '[[1],[1, 0],[1, 1, 1]]'
-    nn_config = '{"input_sizes": [3072],"output_sizes": [10],"embedding": {"1": {"opt_type": "dense","opt_params": {"units": "10"}}}}'
+    # uncomment for local debugging purposes
+    #arch = '[[1],[1, 0],[1, 1, 1]]'
+    #nn_config = '{"input_sizes": [3072],"output_sizes": [10],"embedding": {"1": {"opt_type": "dense","opt_params": {"units": "10"}}}}'
     train_model(num_epochs, arch, nn_config)
 	
 	
