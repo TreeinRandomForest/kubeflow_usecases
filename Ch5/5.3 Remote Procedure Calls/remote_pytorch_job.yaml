@@ -1,0 +1,28 @@
+apiVersion: "kubeflow.org/v1"
+kind: "PyTorchJob"
+metadata:
+  name: "remote-pytorch-job"
+spec:
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      restartPolicy: OnFailure
+      template:
+        spec:
+          containers:
+            - name: pytorch
+              imagePullPolicy: Always
+              image: docker.io/nakfour/rpc-learning:v0.1
+              # Comment out the below resources to use the CPU.
+              resources: {} 
+    Worker:
+      replicas: 10
+      restartPolicy: OnFailure
+      template:
+        spec:
+          containers: 
+            - name: pytorch
+              imagePullPolicy: Always
+              image: docker.io/nakfour/rpc-learning:v0.1
+              # Comment out the below resources to use the CPU.
+              resources: {} 
