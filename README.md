@@ -2,7 +2,7 @@
 
 [Kubeflow in Action](http://mng.bz/DKZg)
 
-![](KFinAction.jpg)
+[![KF in Action Screenshot](KFinAction.jpg)](http://mng.bz/DKZg)
 
 MEAP (Manning Early Access Program) available now
 
