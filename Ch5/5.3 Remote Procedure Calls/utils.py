@@ -62,6 +62,28 @@ def plot_learning_curve(filename):
 
     return d
 
+def plot_multiple_learning_curves(flist):
+    plt.figure()
+    for filename in flist:
+        d = json.load(open(filename, 'rb'))
+
+        time_vals = np.array([float(x) for x in list(d.keys())])
+
+        plt.plot(time_vals, [v[0] for v in d.values()], label=f'{filename}: batch')
+        plt.plot(time_vals, [v[1] for v in d.values()], label=f'{filename}: exp avg')
+
+        #ticks = np.arange(0, len(time_vals), 1)
+        #labels = [format(float(t), ".1f") for t in time_vals[ticks]]
+
+        #plt.xticks(ticks=ticks, labels=labels, rotation=90)
+
+
+    plt.xlabel('Time (s)')
+    plt.ylabel('Average Reward in Current Batch')
+
+    plt.legend()
+
+
 def animate(policy_filename, env_name='CartPole-v1'):
     '''Can be combined with create trajectories above
     '''
