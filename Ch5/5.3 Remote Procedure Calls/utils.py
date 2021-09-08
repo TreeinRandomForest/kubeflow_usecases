@@ -84,13 +84,17 @@ def plot_multiple_learning_curves(flist):
     plt.legend()
 
 
-def animate(policy_filename, env_name='CartPole-v1'):
+def animate(policy_filename, env_name='CartPole-v1', save_loc=None):
     '''Can be combined with create trajectories above
     '''
     policy = torch.load(open(policy_filename, 'rb'))
 
     #env specific
     env = gym.make(env_name)
+    
+    if save_loc:
+        env = gym.wrappers.Monitor(env, save_loc, video_callable=lambda x: True, force=True)
+
     action_space = np.arange(0, env.action_space.n)
 
     state = env.reset()
@@ -107,3 +111,4 @@ def animate(policy_filename, env_name='CartPole-v1'):
 
         state, reward, done, info = env.step(action_selected.item())
 
+    #ffmpeg -i openaigym.video.0.1092155.video000000.mp4  -loop 0 output.gif
