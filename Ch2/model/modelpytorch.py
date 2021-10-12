@@ -14,7 +14,7 @@ class modelpytorch(object):
         self.clf = torch.load('modelpytorch.pt')
         print("Model uploaded to class")
     
-    def predict(self,x,features_names):
+    def predict(self,x):
         print(x)
         print(type(x))
         #old way
@@ -25,6 +25,7 @@ class modelpytorch(object):
         #self.proba_1 = self.clf.predict_proba(rowdf)[:,1]
         #predictions = self.clf.predict(rowdf)
         #return predictions
-        features = torch.from_numpy(x)
-        pred = self.model(features)
+        features = torch.from_numpy(x).float()
+        pred = self.clf(features)
+        
         return pred.detach().numpy()
