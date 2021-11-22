@@ -1,0 +1,1 @@
+curl -H "Host: ${SERVICE_HOSTNAME}" -d @input.json http://istio-ingressgateway-istio-system.apps.ai-isv.zzx2.p1.openshiftapps.com/v1/models/bert-v2:predict
