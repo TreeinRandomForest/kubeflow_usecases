@@ -1,0 +1,12 @@
+apiVersion: "serving.kubeflow.org/v1beta1"
+kind: "InferenceService"
+metadata:
+  name: "pytorchfraud"
+spec:
+  predictor:
+    serviceAccountName: serving
+    # 10% of traffic is sent to this model
+    canaryTrafficPercent: 20
+    pytorch:
+      storageUri: "s3://nakfour/fddmodel/v2"
+      modelClassName: "Net"

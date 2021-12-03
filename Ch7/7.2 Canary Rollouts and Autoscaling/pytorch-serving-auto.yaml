@@ -1,0 +1,12 @@
+apiVersion: "serving.kubeflow.org/v1beta1"
+kind: "InferenceService"
+metadata:
+  name: "pytorchfraud"
+  annotations:
+    autoscaling.knative.dev/target: "1"
+spec:
+  predictor:
+    serviceAccountName: serving
+    pytorch:
+      storageUri: "s3://nakfour/fddmodel/"
+      modelClassName: "Net"
